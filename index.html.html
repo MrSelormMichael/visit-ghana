@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visit Ghana – Akwaaba | final interactive</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    :root {
+      --red:    #E03A3A;
+      --gold:   #FDBB23;
+      --green:  #0F8B5E;
+      --light-bg: #f5f0e6;
+      --dark-text: #1e2a1e;
+      --glass-border: rgba(253, 187, 35, 0.4);
+      --font-display: 'Cormorant Garamond', serif;
+      --font-body: 'DM Sans', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--light-bg); font-family: var(--font-body); color: #1e2a1e; overflow-x: hidden; }
+    h1, h2, h3, .serif { font-family: var(--font-display); font-weight: 600; }
+
+    /* ===== LOADER ===== */
+    #loader {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      overflow: hidden;
+      background: #0a1a0f;
+      transition: opacity 0.8s ease;
+    }
+
+    /* Animated kente-stripe background */
+    #loader-bg {
+      position: absolute; inset: 0;
+      background: repeating-linear-gradient(
+        135deg,
+        #0a1a0f 0px, #0a1a0f 20px,
+        #0f2a18 20px, #0f2a18 40px
+      );
+      animation: bgShift 4s linear infinite;
+    }
+    @keyframes bgShift {
+      from { background-position: 0 0; }
+      to { background-position: 56px 56px; }
+    }
+
+    /* Radial glow */
+    #loader-glow {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, rgba(253,187,35,0.12) 0%, transparent 70%);
+      animation: glowPulse 2.5s ease-in-out infinite;
+    }
+    @keyframes glowPulse {
+      0%, 100% { opacity: 0.6; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+
+    /* Horizontal kente bands */
+    .loader-kente-band {
+      position: absolute; left: 0; right: 0; height: 6px;
+      background: repeating-linear-gradient(90deg,
+        var(--red) 0px 30px,
+        var(--gold) 30px 60px,
+        var(--green) 60px 90px,
+        #111 90px 110px,
+        var(--gold) 110px 130px
+      );
+      opacity: 0.7;
+    }
+    .loader-kente-band.top { top: 0; animation: slideRight 3s linear infinite; }
+    .loader-kente-band.bottom { bottom: 0; animation: slideLeft 3s linear infinite; }
+    @keyframes slideRight { from { background-position: 0 0; } to { background-position: 130px 0; } }
+    @keyframes slideLeft { from { background-position: 0 0; } to { background-position: -130px 0; } }
+
+    .loader-content {
+      position: relative; z-index: 2;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 28px;
+    }
+
+    /* Animated SVG Black Star */
+    #loader-star-wrap {
+      position: relative; width: 120px; height: 120px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #loader-star-svg {
+      width: 90px; height: 90px;
+      filter: drop-shadow(0 0 20px rgba(253,187,35,0.8));
+      animation: starSpin 8s linear infinite, starPulse 2s ease-in-out infinite;
+    }
+    @keyframes starSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    @keyframes starPulse {
+      0%, 100% { filter: drop-shadow(0 0 15px rgba(253,187,35,0.6)); }
+      50% { filter: drop-shadow(0 0 35px rgba(253,187,35,1)) drop-shadow(0 0 60px rgba(224,58,58,0.4)); }
+    }
+
+    /* Orbiting dots */
+    .orbit-ring {
+      position: absolute; inset: 0;
+      animation: orbitSpin 3s linear infinite;
+    }
+    @keyframes orbitSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .orbit-dot {
+      position: absolute; width: 8px; height: 8px;
+      border-radius: 50%; top: 50%; left: 50%;
+      transform-origin: 0 0;
+    }
+    .orbit-dot:nth-child(1) { background: var(--gold); transform: rotate(0deg) translateX(52px) translateY(-4px); }
+    .orbit-dot:nth-child(2) { background: var(--red); transform: rotate(120deg) translateX(52px) translateY(-4px); }
+    .orbit-dot:nth-child(3) { background: var(--green); transform: rotate(240deg) translateX(52px) translateY(-4px); }
+
+    .loader-wordmark {
+      font-family: var(--font-display);
+      font-size: 3.8rem;
+      font-weight: 600;
+      color: #f5ead0;
+      letter-spacing: 0.02em;
+      text-align: center;
+      line-height: 1;
+      animation: fadeUp 0.8s ease both;
+    }
+    .loader-wordmark span { color: var(--gold); }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .loader-sub {
+      color: #9aaa8a;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      animation: fadeUp 0.8s 0.2s ease both;
+    }
+
+    .loader-progress-wrap {
+      width: 200px; height: 2px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px; overflow: hidden;
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+    .loader-progress-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, var(--red), var(--gold), var(--green));
+      border-radius: 4px;
+    }
+
+    /* Decorative corner adinkra lines */
+    .loader-corner {
+      position: absolute; width: 60px; height: 60px;
+      border-color: rgba(253,187,35,0.3);
+      border-style: solid;
+    }
+    .loader-corner.tl { top: 24px; left: 24px; border-width: 2px 0 0 2px; }
+    .loader-corner.tr { top: 24px; right: 24px; border-width: 2px 2px 0 0; }
+    .loader-corner.bl { bottom: 24px; left: 24px; border-width: 0 0 2px 2px; }
+    .loader-corner.br { bottom: 24px; right: 24px; border-width: 0 2px 2px 0; }
+
+    /* ===== NAVBAR ===== */
+    #navbar {
+      position: fixed; top: 0; width: 100%; z-index: 1000;
+      padding: 0 5%; height: 70px;
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,245,235,0.3);
+      backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--glass-border);
+      transition: 0.3s;
+    }
+    #navbar.scrolled { background: rgba(255,245,235,0.88); }
+    .flag-icon { width: 38px; height: 24px; display: flex; flex-direction: column; border-radius: 3px; overflow: hidden; border: 1px solid rgba(0,0,0,0.08); }
+    .fi-stripe { flex: 1; }
+    .fi-r { background: var(--red); }
+    .fi-g { background: var(--gold); display: flex; align-items: center; justify-content: center; }
+    .fi-gr { background: var(--green); }
+    .fi-star { width: 8px; height: 8px; background: #242424; clip-path: polygon(50% 0%,61% 35%,98% 35%,68% 57%,79% 91%,50% 70%,21% 91%,32% 57%,2% 35%,39% 35%); }
+    .nav-brand { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; color: var(--dark-text); text-decoration: none; margin-left: 8px; }
+    .nav-links-wrap { display: flex; align-items: center; gap: 28px; }
+    .nav-links-wrap a { color: #2e3b2e; text-decoration: none; font-size: 0.85rem; letter-spacing: 0.1em; text-transform: uppercase; }
+    .glass-btn {
+      background: rgba(253,187,35,0.15); border: 1px solid var(--glass-border);
+      backdrop-filter: blur(8px); border-radius: 40px; padding: 8px 24px;
+      color: #2c4a2e !important; font-weight: 500; transition: 0.2s; text-decoration: none; display: inline-block;
+    }
+    .glass-btn:hover { background: rgba(253,187,35,0.3); border-color: var(--gold); }
+
+    .flag-stripe-bar { height: 5px; background: linear-gradient(90deg, var(--red) 0% 33.3%, var(--gold) 33.3% 66.6%, var(--green) 66.6% 100%); }
+
+    /* ===== HERO ===== */
+    #hero {
+      min-height: 100vh; position: relative;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0 5%; background: #fcf6ed; overflow: hidden;
+    }
+    .hero-slideshow { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 0; }
+    .hero-slide { position: absolute; inset: 0; opacity: 0; transition: opacity 1s; background-size: cover; background-position: center; }
+    .hero-slide.active { opacity: 1; }
+    .hero-overlay { position: absolute; inset: 0; background: radial-gradient(circle at 30% 50%, rgba(255,245,235,0.55), rgba(255,240,220,0.3)); }
+    .hero-content {
+      position: relative; z-index: 5; max-width: 600px;
+      background: rgba(255,255,245,0.52); backdrop-filter: blur(32px);
+      padding: 50px 60px; border-radius: 28px;
+      border: 1px solid rgba(253,187,35,0.3);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.12);
+    }
+    .hero-eyebrow { color: var(--red); letter-spacing: 0.25em; font-size: 0.75rem; text-transform: uppercase; }
+    .hero-title { font-size: 5.5rem; line-height: 0.95; color: #1e3a2a; }
+    .hero-title em { color: var(--gold); font-style: italic; }
+    .hero-sub { font-size: 1.2rem; color: #3d4f3d; margin: 20px 0; }
+    .hero-btns { display: flex; gap: 14px; }
+    .slide-dot { width: 8px; height: 8px; border-radius: 50%; background: #bbb39b; cursor: pointer; border: none; transition: 0.2s; }
+    .slide-dot.active { background: var(--gold); transform: scale(1.3); }
+
+    /* ===== SECTION STYLES ===== */
+    .section-page {
+      min-height: 100vh; padding: 100px 5%;
+      display: flex; flex-direction: column;
+      background: #fcf6ed;
+      border-top: 2px solid rgba(253,187,35,0.2);
+      position: relative;
+    }
+    .section-container { display: flex; align-items: center; justify-content: space-between; gap: 60px; flex: 1; }
+    .section-text { flex: 1; max-width: 520px; }
+    .section-eyebrow { color: var(--red); text-transform: uppercase; letter-spacing: 0.2em; font-size: 0.8rem; }
+    .section-heading { font-size: 3.2rem; color: #2c4a2e; }
+    .section-heading em { color: var(--gold); }
+    .section-body { color: #3d503d; font-size: 1.1rem; line-height: 1.6; }
+    .glass-card {
+      background: rgba(255,250,240,0.55); backdrop-filter: blur(16px);
+      border: 1px solid rgba(253,187,35,0.25); border-radius: 24px; padding: 26px; transition: 0.2s;
+    }
+    .glass-card:hover { background: rgba(255,255,240,0.8); border-color: var(--gold); }
+    .kente-divider { height: 16px; background: repeating-linear-gradient(90deg, var(--red) 0px 20px, var(--gold) 20px 40px, var(--green) 40px 60px); opacity: 0.5; }
+
+    /* ===== SECTION 1 — DESTINATIONS (bg image + 3D star overlay) ===== */
+    #destinations-page {
+      position: relative;
+      overflow: hidden;
+      background: none;
+    }
+    #dest-bg {
+      position: absolute; inset: 0; z-index: 0;
+      background-image: url('./resources/9128822.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      filter: brightness(0.38) saturate(0.85);
+      transition: filter 0.4s;
+    }
+    #destinations-page .section-container { position: relative; z-index: 2; }
+
+    /* Text panel with glass over the bg */
+    #destinations-page .section-text {
+      background: rgba(10, 22, 10, 0.55);
+      backdrop-filter: blur(24px);
+      border: 1px solid rgba(253,187,35,0.25);
+      border-radius: 28px;
+      padding: 44px 48px;
+    }
+    #destinations-page .section-eyebrow { color: var(--gold); }
+    #destinations-page .section-heading { color: #f5ead0; }
+    #destinations-page .section-body { color: #c5d5c5; }
+    #destinations-page .glass-card {
+      background: rgba(253,187,35,0.1);
+      border-color: rgba(253,187,35,0.3);
+      color: #f0e8d0;
+    }
+    #destinations-page .glass-card strong { color: #fde89a; }
+    #destinations-page .glass-card p { color: #c0ccb8; }
+
+    /* Star canvas wrapper */
+    #star-canvas-wrapper {
+      flex: 1; height: 500px; min-width: 380px;
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+    }
+    #star-canvas { width: 100%; height: 100%; display: block; }
+
+    .star-hint {
+      position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%);
+      font-size: 0.72rem; color: rgba(253,187,35,0.7);
+      letter-spacing: 0.2em; text-transform: uppercase;
+      display: flex; align-items: center; gap: 6px;
+      opacity: 1; transition: opacity 0.6s; pointer-events: none;
+    }
+    .star-hint.hidden { opacity: 0; }
+
+    /* ===== SECTIONS 2-4 ===== */
+    .canvas-slideshow {
+      width: 100%; height: 100%; position: relative;
+      border-radius: 28px; overflow: hidden;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    }
+    .canvas-slide {
+      position: absolute; inset: 0; opacity: 0; transition: opacity 0.8s;
+      background-size: cover; background-position: center;
+      display: flex; align-items: flex-end; padding: 20px;
+    }
+    .canvas-slide.active { opacity: 1; }
+    .slide-caption {
+      background: rgba(255,250,240,0.72); backdrop-filter: blur(12px);
+      border-radius: 20px; padding: 16px 20px; width: 100%;
+      border: 1px solid rgba(253,187,35,0.3); color: #1e2a1e;
+    }
+    .slide-caption strong { font-size: 1.3rem; font-family: var(--font-display); }
+    .slide-caption p { margin: 4px 0 0; font-size: 0.9rem; }
+    .section-canvas { flex: 1; height: 500px; min-width: 400px; background: transparent; position: relative; }
+    .map-placeholder {
+      width: 100%; height: 100%; background: #e0dbc8;
+      border-radius: 28px; display: flex; align-items: center;
+      justify-content: center; border: 3px dashed var(--green);
+    }
+    .map-placeholder img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .adinkra-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 20px; }
+    .adinkra-grid .glass-card { display: flex; flex-direction: column; align-items: center; padding: 16px 8px; }
+    .adinkra-grid .glass-card img { width: 60px; height: 60px; object-fit: contain; margin-bottom: 8px; }
+
+    @media (max-width: 900px) {
+      .section-container { flex-direction: column; }
+      .section-canvas, #star-canvas-wrapper { width: 100%; height: 340px; min-width: auto; }
+      #destinations-page .section-text { padding: 28px 24px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== LOADER ===== -->
+<div id="loader">
+  <div id="loader-bg"></div>
+  <div id="loader-glow"></div>
+  <div class="loader-kente-band top"></div>
+  <div class="loader-kente-band bottom"></div>
+  <div class="loader-corner tl"></div>
+  <div class="loader-corner tr"></div>
+  <div class="loader-corner bl"></div>
+  <div class="loader-corner br"></div>
+
+  <div class="loader-content">
+    <div id="loader-star-wrap">
+      <!-- Orbiting dots -->
+      <div class="orbit-ring">
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+        <div class="orbit-dot"></div>
+      </div>
+      <!-- Black Star SVG -->
+      <svg id="loader-star-svg" viewBox="0 0 100 100" fill="none">
+        <polygon
+          points="50,5 61,35 95,35 68,57 79,91 50,70 21,91 32,57 5,35 39,35"
+          fill="#111111"
+          stroke="#FDBB23"
+          stroke-width="2.5"
+          stroke-linejoin="round"
+        />
+        <circle cx="50" cy="50" r="8" fill="#FDBB23" opacity="0.9"/>
+      </svg>
+    </div>
+
+    <div class="loader-wordmark">Visit <span>Ghana</span></div>
+    <p class="loader-sub">Akwaaba — You Are Welcome</p>
+    <div class="loader-progress-wrap">
+      <div class="loader-progress-bar" id="loader-bar"></div>
+    </div>
+  </div>
+</div>
+
+<!-- NAVBAR -->
+<nav id="navbar">
+  <div style="display:flex;align-items:center;">
+    <div class="flag-icon">
+      <div class="fi-stripe fi-r"></div>
+      <div class="fi-stripe fi-g"><div class="fi-star"></div></div>
+      <div class="fi-stripe fi-gr"></div>
+    </div>
+    <span class="nav-brand">Visit Ghana</span>
+  </div>
+  <div class="nav-links-wrap">
+    <a href="#hero">Home</a>
+    <a href="#destinations-page">Destinations</a>
+    <a href="#adinkra-page">Adinkra</a>
+    <a href="#experiences-page">Experiences</a>
+    <a href="#plan-page">Plan</a>
+    <a href="#" class="glass-btn">Book Now</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-slideshow">
+    <div class="hero-slide active" style="background-image:url('./resources/Independence Square.jpg');"></div>
+    <div class="hero-slide" style="background-image:url('./resources/Umbrella Walk.jpg');"></div>
+    <div class="hero-slide" style="background-image:url('./resources/Elmina.jpg');"></div>
+    <div class="hero-slide" style="background-image:url('./resources/Waterfall.jpg');"></div>
+    <div class="hero-overlay"></div>
+  </div>
+  <div class="hero-content">
+    <p class="hero-eyebrow">✦ West Africa's gem ✦</p>
+    <h1 class="hero-title">Discover <em>Ghana</em></h1>
+    <p class="hero-sub">Akwaaba — you are welcome. Culture, warmth, and wonder await.</p>
+    <div class="hero-btns">
+      <a href="#destinations-page" class="glass-btn" style="background:rgba(253,187,35,0.2);">Explore</a>
+      <a href="#plan-page" class="glass-btn">Plan trip</a>
+    </div>
+  </div>
+  <div style="position:absolute;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20;">
+    <span class="slide-dot active" onclick="goToHeroSlide(0)"></span>
+    <span class="slide-dot" onclick="goToHeroSlide(1)"></span>
+    <span class="slide-dot" onclick="goToHeroSlide(2)"></span>
+    <span class="slide-dot" onclick="goToHeroSlide(3)"></span>
+  </div>
+</section>
+
+<div class="flag-stripe-bar"></div>
+
+<!-- ===== SECTION 1: DESTINATIONS — bg image + scroll star ===== -->
+<section id="destinations-page" class="section-page">
+  <div id="dest-bg"></div>
+  <div class="section-container">
+    <div class="section-text">
+      <p class="section-eyebrow">✦ MUST‑SEE DESTINATIONS ✦</p>
+      <h2 class="section-heading">Ghana's most <em>stunning</em> places</h2>
+      <p class="section-body" style="margin-top:14px;">From the canopy walkway at Kakum to the beaches of Ada Foah, every corner tells an extraordinary story.</p>
+      
+    </div>
+
+    <!-- Scroll-driven 3D Black Star -->
+    <div id="star-canvas-wrapper">
+      <canvas id="star-canvas"></canvas>
+      <div class="star-hint" id="star-hint">↕ Scroll to spin</div>
+    </div>
+  </div>
+</section>
+
+<div class="kente-divider"></div>
+
+<!-- SECTION 2: ADINKRA -->
+<section id="adinkra-page" class="section-page">
+  <div class="section-container">
+    <div class="section-text">
+      <p class="section-eyebrow">✦ ANCIENT SYMBOLS ✦</p>
+      <h2 class="section-heading">Sacred <em>Adinkra</em> wisdom</h2>
+      <p class="section-body" style="margin-top:14px;">Visual philosophy of the Akan people — each symbol encodes a proverb, a value, a piece of history.</p>
+      <div class="adinkra-grid">
+        <div class="glass-card p-2 text-center">
+          <img src="./resources/gye nyame.png" alt="Gye Nyame">
+          <strong>Gye Nyame</strong><br><small>except God</small>
+        </div>
+        <div class="glass-card p-2 text-center">
+          <img src="./resources/283-2839927_sankofa-village-cdc-sankofa-bird.png" alt="Sankofa">
+          <strong>Sankofa</strong><br><small>learn from past</small>
+        </div>
+        <div class="glass-card p-2 text-center">
+          <img src="./resources/dwennimmen.png" alt="Dwennimmen">
+          <strong>Dwennimmen</strong><br><small>strength & humility</small>
+        </div>
+        <div class="glass-card p-2 text-center">
+          <img src="./resources/gye nyame.png" alt="Gye Nyame">
+          <strong>Gye Nyame</strong><br><small>except God</small>
+        </div>
+        <div class="glass-card p-2 text-center">
+          <img src="./resources/283-2839927_sankofa-village-cdc-sankofa-bird.png" alt="Sankofa">
+          <strong>Sankofa</strong><br><small>learn from past</small>
+        </div>
+        <div class="glass-card p-2 text-center">
+          <img src="./resources/dwennimmen.png" alt="Dwennimmen">
+          <strong>Dwennimmen</strong><br><small>strength & humility</small>
+        </div>
+      </div>
+    </div>
+    <div class="section-canvas">
+      <div class="canvas-slideshow" id="tourist-slideshow">
+        <div class="canvas-slide active" style="background-image:url('./resources/Independence Square.jpg');">
+          <div class="slide-caption"><strong>Independence Square</strong><p>Accra's monumental symbol of freedom.</p></div>
+        </div>
+        <div class="canvas-slide" style="background-image:url('./resources/Elmina.jpg');">
+          <div class="slide-caption"><strong>Elmina Castle</strong><p>UNESCO fortress, a poignant reminder of history.</p></div>
+        </div>
+        <div class="canvas-slide" style="background-image:url('./resources/Umbrella Walk.jpg');">
+          <div class="slide-caption"><strong>Umbrella Walk</strong><p>Lively markets and vibrant street life.</p></div>
+        </div>
+        <div class="canvas-slide" style="background-image:url('./resources/Waterfall.jpg');">
+          <div class="slide-caption"><strong>Wli Waterfall</strong><p>The highest waterfall in West Africa.</p></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:12px;">
+        <span class="slide-dot active" onclick="goToTouristSlide(0)"></span>
+        <span class="slide-dot" onclick="goToTouristSlide(1)"></span>
+        <span class="slide-dot" onclick="goToTouristSlide(2)"></span>
+        <span class="slide-dot" onclick="goToTouristSlide(3)"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="kente-divider"></div>
+
+<!-- SECTION 3: EXPERIENCES -->
+<section id="experiences-page" class="section-page">
+  <div class="section-container">
+    <div class="section-text">
+      <p class="section-eyebrow">✦ IMMERSIVE EXPERIENCES ✦</p>
+      <h2 class="section-heading">Live Ghana, <em>don't just visit</em></h2>
+      <p class="section-body" style="margin-top:14px;">Jollof that ruins you, Afrobeats that moves you, and people whose joy is contagious.</p>
+      <div class="row g-2 mt-3">
+        <div class="col-6"><div class="glass-card p-3">🍲 Jollof & fufu</div></div>
+        <div class="col-6"><div class="glass-card p-3">🥁 Afrobeats</div></div>
+        <div class="col-6"><div class="glass-card p-3">🌿 Rainforest</div></div>
+        <div class="col-6"><div class="glass-card p-3">🏰 Heritage</div></div>
+      </div>
+    </div>
+    <div class="section-canvas">
+      <div class="canvas-slideshow" id="culture-slideshow">
+        <div class="canvas-slide active" style="background-image:url('./resources/jollof-placeholder.jpg');">
+          <div class="slide-caption"><strong>Jollof Rice</strong><p>The iconic West African dish.</p></div>
+        </div>
+        <div class="canvas-slide" style="background-image:url('./resources/afrobeats-placeholder.jpg');">
+          <div class="slide-caption"><strong>Afrobeats</strong><p>Global sound born in Ghana.</p></div>
+        </div>
+        <div class="canvas-slide" style="background-image:url('./resources/kente-placeholder.jpg');">
+          <div class="slide-caption"><strong>Kente Cloth</strong><p>Handwoven fabric of royalty.</p></div>
+        </div>
+        <div class="canvas-slide" style="background-image:url('./resources/ada-foah-placeholder.jpg');">
+          <div class="slide-caption"><strong>Ada Foah</strong><p>Estuary beaches.</p></div>
+        </div>
+      </div>
+      <div style="display:flex;gap:6px;justify-content:center;margin-top:12px;">
+        <span class="slide-dot active" onclick="goToCultureSlide(0)"></span>
+        <span class="slide-dot" onclick="goToCultureSlide(1)"></span>
+        <span class="slide-dot" onclick="goToCultureSlide(2)"></span>
+        <span class="slide-dot" onclick="goToCultureSlide(3)"></span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="kente-divider"></div>
+
+<!-- SECTION 4: PLAN -->
+<section id="plan-page" class="section-page">
+  <div class="section-container" style="flex-direction:row-reverse;">
+    <div class="section-text">
+      <p class="section-eyebrow">✦ START PLANNING ✦</p>
+      <h2 class="section-heading">Your <em>dream</em> trip awaits</h2>
+      <p class="section-body" style="margin-top:14px;">Direct flights from NYC, ATL, IAD. Visa on arrival for many. Let's make it happen.</p>
+      <div class="glass-card mt-4 p-4">
+        <div class="d-flex gap-3 align-items-center">
+          <span class="fs-1">✈️</span>
+          <span>JFK, ATL, IAD → ACC (10–11h)</span>
+        </div>
+        <div class="mt-3 small text-secondary">Dry season: Nov–Mar is perfect.</div>
+      </div>
+    </div>
+    <div class="section-canvas">
+      <div class="map-placeholder">
+        <img src="./resources/ghana-map-placeholder.png" alt="Map of Ghana">
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA BANNER -->
+<section style="padding:80px 5%;background:#f5ebda;text-align:center;">
+  <h2 style="font-family:var(--font-display);font-size:4rem;color:#2c4a2e;">Akwaaba — <em>You Are Welcome</em></h2>
+  <a href="#hero" class="glass-btn" style="padding:14px 42px;margin-top:20px;display:inline-block;">Explore now ✦</a>
+</section>
+
+<!-- FOOTER -->
+<footer style="background:#eae1d1;padding:50px 5% 30px;">
+  <div class="flag-stripe-bar" style="border-radius:2px;"></div>
+  <div class="row mt-4">
+    <div class="col-md-4"><span class="nav-brand">Visit Ghana</span><p class="text-secondary">Warmth, culture, wonder.</p></div>
+    <div class="col-md-2"><strong>Destinations</strong><ul class="list-unstyled"><li>Accra</li><li>Kumasi</li></ul></div>
+    <div class="col-md-2"><strong>Culture</strong><ul class="list-unstyled"><li>Adinkra</li><li>Kente</li></ul></div>
+    <div class="col-md-2"><strong>Plan</strong><ul class="list-unstyled"><li>Visa</li><li>Flights</li></ul></div>
+  </div>
+  <div class="text-center text-secondary pt-4">© 2025 Visit Ghana. Akwaaba.</div>
+</footer>
+
+<script>
+  // ===== LOADER =====
+  (function() {
+    const bar = document.getElementById('loader-bar');
+    const loader = document.getElementById('loader');
+    let w = 0;
+    const int = setInterval(() => {
+      w += 1.1;
+      if (w >= 100) {
+        w = 100; clearInterval(int);
+        setTimeout(() => {
+          loader.style.opacity = '0';
+          setTimeout(() => loader.style.display = 'none', 800);
+        }, 500);
+      }
+      bar.style.width = w + '%';
+    }, 30);
+  })();
+
+  // Navbar scroll
+  window.addEventListener('scroll', () => {
+    document.getElementById('navbar').classList.toggle('scrolled', window.scrollY > 60);
+  });
+
+  // ===== HERO SLIDESHOW =====
+  let heroIdx = 0;
+  window.goToHeroSlide = function(n) {
+    document.querySelectorAll('.hero-slide').forEach((s,i) => s.classList.toggle('active', i===n));
+    document.querySelectorAll('#hero .slide-dot').forEach((d,i) => d.classList.toggle('active', i===n));
+    heroIdx = n;
+  };
+  setInterval(() => goToHeroSlide((heroIdx+1)%4), 5000);
+
+  // ===== TOURIST SLIDESHOW =====
+  let touristIdx = 0;
+  window.goToTouristSlide = function(n) {
+    document.querySelectorAll('#tourist-slideshow .canvas-slide').forEach((s,i) => s.classList.toggle('active', i===n));
+    document.querySelectorAll('#adinkra-page .slide-dot').forEach((d,i) => d.classList.toggle('active', i===n));
+    touristIdx = n;
+  };
+  setInterval(() => goToTouristSlide((touristIdx+1)%4), 4500);
+
+  // ===== CULTURE SLIDESHOW =====
+  let cultureIdx = 0;
+  window.goToCultureSlide = function(n) {
+    document.querySelectorAll('#culture-slideshow .canvas-slide').forEach((s,i) => s.classList.toggle('active', i===n));
+    document.querySelectorAll('#experiences-page .slide-dot').forEach((d,i) => d.classList.toggle('active', i===n));
+    cultureIdx = n;
+  };
+  setInterval(() => goToCultureSlide((cultureIdx+1)%4), 4800);
+
+  // ===== SCROLL-DRIVEN BLACK STAR (Section 1) =====
+  function initBlackStarScene() {
+    const canvas = document.getElementById('star-canvas');
+    const wrapper = document.getElementById('star-canvas-wrapper');
+    const hint = document.getElementById('star-hint');
+    if (!canvas || !wrapper) return;
+
+    let w = wrapper.clientWidth || 440;
+    let h = wrapper.clientHeight || 500;
+    canvas.width = w; canvas.height = h;
+
+    const scene = new THREE.Scene();
+    scene.background = null;
+
+    const camera = new THREE.PerspectiveCamera(40, w/h, 0.1, 100);
+    camera.position.set(0, 0, 7);
+
+    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+    renderer.setSize(w, h);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+
+    // === Materials ===
+    const blackMat = new THREE.MeshStandardMaterial({
+      color: 0x111111, metalness: 0.8, roughness: 0.2, emissive: 0x05050a
+    });
+    const goldMat = new THREE.MeshStandardMaterial({
+      color: 0xFDBB23, metalness: 0.9, roughness: 0.12, emissive: 0x442200
+    });
+    const redMat = new THREE.MeshStandardMaterial({
+      color: 0xE03A3A, metalness: 0.4, roughness: 0.5, emissive: 0x330000
+    });
+
+    // === Star shape ===
+    const starShape = new THREE.Shape();
+    const nPts = 5, outerR = 1.65, innerR = 0.7;
+    for (let i = 0; i < nPts * 2; i++) {
+      const r = i % 2 === 0 ? outerR : innerR;
+      const angle = (i / (nPts * 2)) * Math.PI * 2 - Math.PI / 2;
+      const x = Math.cos(angle) * r, y = Math.sin(angle) * r;
+      i === 0 ? starShape.moveTo(x, y) : starShape.lineTo(x, y);
+    }
+    starShape.closePath();
+
+    const starGeo = new THREE.ExtrudeGeometry(starShape, {
+      steps: 1, depth: 0.5,
+      bevelEnabled: true, bevelThickness: 0.12, bevelSize: 0.1, bevelSegments: 4
+    });
+    starGeo.center();
+
+    const starGroup = new THREE.Group();
+    const starMesh = new THREE.Mesh(starGeo, blackMat);
+    starGroup.add(starMesh);
+
+    // Gold ring
+    starGroup.add(new THREE.Mesh(new THREE.TorusGeometry(2.05, 0.065, 18, 72), goldMat));
+
+    // Red thin inner ring
+    starGroup.add(new THREE.Mesh(new THREE.TorusGeometry(1.5, 0.038, 14, 56), redMat));
+
+    // Center gold sphere
+    const centerSphere = new THREE.Mesh(new THREE.SphereGeometry(0.17, 24, 24), goldMat);
+    centerSphere.position.z = 0.3;
+    starGroup.add(centerSphere);
+
+    scene.add(starGroup);
+
+    // === Lighting ===
+    scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+    const key = new THREE.DirectionalLight(0xfff5e0, 2.2);
+    key.position.set(5, 8, 6); scene.add(key);
+    const goldLight = new THREE.PointLight(0xFDBB23, 3, 14);
+    goldLight.position.set(-3, 2, 5); scene.add(goldLight);
+    const rimLight = new THREE.PointLight(0xE03A3A, 2, 10);
+    rimLight.position.set(3, -4, -3); scene.add(rimLight);
+
+    // === Scroll-driven rotation ===
+    let scrollRotY = 0;
+    let targetScrollRotY = 0;
+    let hasScrolled = false;
+
+    window.addEventListener('scroll', () => {
+      const section = document.getElementById('destinations-page');
+      if (!section) return;
+      const rect = section.getBoundingClientRect();
+      const sectionH = section.offsetHeight;
+      // How far through the section we've scrolled: 0 at top, 1 at bottom
+      const progress = Math.max(0, Math.min(1, -rect.top / (sectionH - window.innerHeight)));
+      targetScrollRotY = progress * Math.PI * 4; // 2 full rotations through section
+      if (!hasScrolled && progress > 0.01) {
+        hasScrolled = true;
+        hint.classList.add('hidden');
+      }
+    });
+
+    // === Animate ===
+    let time = 0;
+    function animate() {
+      requestAnimationFrame(animate);
+      time += 0.01;
+
+      // Smooth lerp scroll rotation
+      scrollRotY += (targetScrollRotY - scrollRotY) * 0.07;
+
+      starGroup.rotation.y = scrollRotY;
+      // Gentle tilt as you scroll
+      starGroup.rotation.x = Math.sin(scrollRotY * 0.3) * 0.25;
+
+      // Float bob
+      starGroup.position.y = Math.sin(time * 0.85) * 0.12;
+
+      // Pulse center
+      centerSphere.scale.setScalar(1 + Math.sin(time * 2.2) * 0.07);
+
+      // Pulsing light
+      goldLight.intensity = 2.8 + Math.sin(time * 1.6) * 0.6;
+
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    window.addEventListener('resize', () => {
+      w = wrapper.clientWidth || 440;
+      h = wrapper.clientHeight || 500;
+      camera.aspect = w/h; camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+  }
+
+  window.addEventListener('load', () => {
+    setTimeout(initBlackStarScene, 900);
+  });
+</script>
+</body>
+</html>
